@@ -88,7 +88,7 @@ print("Connection to database has been established.")
 # 300 000 - 400 000
 
 print("Comments are loaded from database...")
-load_comments_query = "select * from t_history where sentiment IS NULL LIMIT 300000, 400000"
+load_comments_query = "select * from t_history where sentiment IS NULL LIMIT 300000"
 
 print("Still...")
 cursor.execute(load_comments_query)
@@ -112,7 +112,7 @@ for comment in comments:
         db_connection.commit()
         print("Batch has been committed.")
 
-    print(f"Comment " + str(counter) + " of 100,000")
+    print(f"Comment " + str(counter) + " of 300,000")
     print()
     comment_id = comment[0]
     print(comment_id)
