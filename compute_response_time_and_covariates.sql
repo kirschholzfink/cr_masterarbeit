@@ -1,0 +1,108 @@
+/*
+ ---------------------------------- EXTRACT FEATURES NEEDED FOR LOGISTIC REGRESSION ANALYSIS ---------------------------
+ */
+
+/*
+ Add "sentiment" column to table of comments.
+ */
+alter table t_history
+    add column sentiment varchar(30);
+
+/*
+ -----PERFORM SENTIMENT ANALYSIS OF COMMENTS. See attached sentiment_analysis.py file where this step is performed.-----
+ */
+
+/*
+ Add "Patch Set Count" column to table of changes.
+ */
+alter table t_change
+    add column ch_patchSetCount int;
+
+/*
+ Insert number of patch sets for each review.
+*/
+update t_change ch0, (select ch1.id as changeId, max(rev.rev_patchSetNum) as overallPatchCount
+                     from t_change ch1
+                              join t_revision rev
+                     where rev.rev_changeId = ch1.id
+                     group by ch1.id) as maxPatchesByChangeId
+set ch0.ch_patchSetCount = maxPatchesByChangeId.overallPatchCount
+where ch0.id = maxPatchesByChangeId.changeId;
+
+/*
+ Add "affectedFilesCount" column to table of changes.
+ */
+alter table t_change
+    add column ch_affectedFilesCount int;
+
+/*
+ Insert overall number of files that were affected by a change.
+ */
+update t_change ch, (select rev.rev_changeId as changeId, count(distinct file.id) as fileCount
+                     from t_revision rev
+                              join t_file file on f_revisionId = rev.id
+                     group by rev.rev_changeId) as fileCountByChangeId
+set ch.ch_affectedFilesCount = fileCountByChangeId.fileCount
+where ch.id = fileCountByChangeId.changeId;
+
+/*
+ Add "churnSize" column to table of changes.
+ */
+alter table t_change
+    add column ch_churnSize int;
+
+/*
+ Insert overall churn size associated with a change.
+ */
+update t_change ch, (select rev.rev_changeId                                       as changeId,
+                            (sum(file.f_linesInserted) + sum(file.f_linesDeleted)) as totalChurnSize
+                     from t_revision rev
+                              join t_file file on rev.id = file.f_revisionId
+                     group by changeId) as churnSizeByChangeId
+set ch.ch_churnSize = churnSizeByChangeId.totalChurnSize
+where ch.id = churnSizeByChangeId.changeId;
+
+/*
+ Add "initialResponseTime" column to table of changes.
+ */
+alter table t_change
+    add column ch_initialResponseTime int;
+
+/*
+ Add "initialCommentId" column to table of changes.
+ */
+alter table t_change
+    add column ch_initialCommentId int unique;
+
+/*
+ Insert initial response time to a review request (change).
+ Insert id of initial comment.
+
+ Initial response time is computed as the difference between the timestamp of when the pull request (change) was created
+ and the minimum timestamp of all comments associated to it.
+
+ Only those comments that were written by a reviewer (as opposed to the author themselves) are considered as potential initial responses.
+ See subquery alias "reviewerComments".
+ */
+update t_change ch0,
+    (select responseTimeByChangeId.changeId,
+            responseTimeByChangeId.initialResponseTime as initialResponseTime,
+            comm0.id                                   as initialCommentId
+     from t_history comm0
+              join (select ch1.id                                                        as changeId,
+                           ch_createdTime,
+                           min(reviewerComments.timeStamp)                               as firstCommentTimeStamp,
+                           datediff(min(reviewerComments.timeStamp), ch1.ch_createdTime) as initialResponseTime
+                    from t_change ch1
+                             join (select comm1.hist_changeId as changeId, comm1.hist_createdTime as timeStamp
+                                   from t_history comm1
+                                            join t_change ch2 on ch2.id = comm1.hist_changeId
+                                   where ch2.ch_authorAccountId != comm1.hist_authorAccountId) as reviewerComments
+                                  on ch1.id = reviewerComments.changeId
+                    group by reviewerComments.changeId) as responseTimeByChangeId
+                   on responseTimeByChangeId.changeId = comm0.hist_changeId and
+                       /*This works because the timestamp of a comment hist_createdTime is unique within a given change.*/
+                      responseTimeByChangeId.firstCommentTimeStamp = comm0.hist_createdTime) as responseTimesByChangeId
+set ch0.ch_initialResponseTime = responseTimesByChangeId.initialResponseTime,
+    ch0.ch_initialCommentId    = responseTimesByChangeId.initialCommentId
+where ch0.id = responseTimesByChangeId.changeId;
