@@ -106,3 +106,50 @@ update t_change ch0,
 set ch0.ch_initialResponseTime = responseTimesByChangeId.initialResponseTime,
     ch0.ch_initialCommentId    = responseTimesByChangeId.initialCommentId
 where ch0.id = responseTimesByChangeId.changeId;
+
+/*
+ Add "authorial sentiment" column to table of changes.
+ */
+
+alter table t_change
+    add column ch_authorialSentiment varchar(30);
+
+/*
+ Insert sentiment 'negative' or 'non-negative' into column "ch_authorialSentiment".
+ Cell is set to 'negative' if at least one comment that is made by the CR request author themselves was classified as 'negative'.
+ Negative comments made by reviewers are discarded.
+ If no negative comments made by the author are present in the comments surrounding a CR request, cell is set to 'non-negative'.
+ */
+
+update t_change ch0, (select hist_changeId as changeId from t_history) as comments
+
+set ch0.ch_authorialSentiment = IF(ch0.id in (select *
+                                              from (select ch1.id as changeId
+                                                    from t_change ch1
+                                                             join t_history comm on ch1.id = comm.hist_changeId
+                                                    where ch1.ch_authorAccountId = hist_authorAccountId
+                                                      and comm.id in
+                                                          (select id from t_history where comm.sentiment like 'negative')) as negativeCommentsByPRAuthors),
+                                   'negative', 'non-negative')
+
+where ch0.id = comments.changeId;
+
+/*
+ How many negative comments were made by the authors of CR requests themselves?
+ */
+
+select count(*)
+from t_change ch
+         join t_history comm on ch.id = comm.hist_changeId
+where ch_authorAccountId = hist_authorAccountId
+  and comm.id in (select id from t_history where comm.sentiment like 'negative');
+
+/*
+ How many negative comments were made by the reviewers of CR requests?
+ */
+
+select count(*)
+from t_change ch
+         join t_history comm on ch.id = comm.hist_changeId
+where ch_authorAccountId != hist_authorAccountId
+  and comm.id in (select id from t_history where comm.sentiment like 'negative');

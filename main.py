@@ -101,7 +101,7 @@ print("Starting sentiment analysis...")
 counter = 0
 
 for comment in comments:
-
+                                                                                    
     counter += 1
 
     if counter == 20:
