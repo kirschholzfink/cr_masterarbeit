@@ -1,4 +1,8 @@
 /*
+ ---------------------------------- PREPROCESSING ---------------------------
+ */
+
+/*
  Delete all reviews in t_change that have not yet been closed.
  */
 delete

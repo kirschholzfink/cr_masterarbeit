@@ -63,10 +63,10 @@ set ch.ch_churnSize = churnSizeByChangeId.totalChurnSize
 where ch.id = churnSizeByChangeId.changeId;
 
 /*
- Add "initialResponseTime" column to table of changes.
+ Add "initialResponseTimeInHours" column to table of changes.
  */
 alter table t_change
-    add column ch_initialResponseTime int;
+    add column ch_initialResponseTimeInHours int;
 
 /*
  Add "initialCommentId" column to table of changes.
@@ -75,13 +75,13 @@ alter table t_change
     add column ch_initialCommentId int unique;
 
 /*
- Insert initial response time to a review request (change).
+ Insert initial response time to a review request (change) in hours.
  Insert id of initial comment.
 
  Initial response time is computed as the difference between the timestamp of when the pull request (change) was created
- and the minimum timestamp of all comments associated to it.
+ and the earliest timestamp of all comments associated to it.
 
- Only those comments that were written by a reviewer (as opposed to the author themselves) are considered as potential initial responses.
+ Only those comments that were written by a reviewer (as opposed to comments written by the author themselves) are considered as potential initial responses.
  See subquery alias "reviewerComments".
  */
 update t_change ch0,
@@ -103,7 +103,7 @@ update t_change ch0,
                    on responseTimeByChangeId.changeId = comm0.hist_changeId and
                        /*This works because the timestamp of a comment hist_createdTime is unique within a given change.*/
                       responseTimeByChangeId.firstCommentTimeStamp = comm0.hist_createdTime) as responseTimesByChangeId
-set ch0.ch_initialResponseTime = responseTimesByChangeId.initialResponseTime,
+set ch0.ch_initialResponseTimeInHours = responseTimesByChangeId.initialResponseTime,
     ch0.ch_initialCommentId    = responseTimesByChangeId.initialCommentId
 where ch0.id = responseTimesByChangeId.changeId;
 
