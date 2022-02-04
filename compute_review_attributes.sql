@@ -1,15 +1,4 @@
 /*
- Add "sentiment" column to table of comments.
- */
-alter table t_history
-    add column sentiment varchar(30);
-
-/*
- -----PERFORM SENTIMENT ANALYSIS OF COMMENTS.
- See attached sentiment_analysis.py file where this step is performed.-----
- */
-
-/*
  Add "Patch Set Count" column to table of changes.
  */
 alter table t_change

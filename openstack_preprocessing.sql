@@ -81,3 +81,13 @@ delete
 from t_file
 where f_revisionId not in (select id from t_revision);
 
+/*
+ Add "sentiment" column to table of comments.
+ */
+alter table t_history
+    add column sentiment varchar(30);
+
+/*
+ Now the sentiment analysis as shown in sentiment_analysis.py can be performed.
+ */
+
