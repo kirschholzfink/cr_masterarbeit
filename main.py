@@ -3,6 +3,9 @@ import torch
 from torch import nn
 from transformers import BertModel, BertTokenizer
 
+# Before executing this script, make sure that 'openstack_preprocessing.sql' has been executed,
+# where a 'sentiment' column is added to the original dataset.
+
 PRE_TRAINED_MODEL_NAME = 'bert-base-cased'
 
 
@@ -50,21 +53,8 @@ def classify_sentiment(comment):
     output = bert_model(input_ids, attention_mask)
     _, prediction = torch.max(output, dim=1)
 
-    #print(f'Review text: {input}')
-   # print(prediction)
-    #print(f'Sentiment  : {class_names[prediction]}')
-
     return class_names[prediction]
 
-
-#input = ["Why an extra header file? The definitions can go directly to settings.cxx",
- #        "Why are we allowing calls to non-existent functions?",
-  #       "why are you going to manager function if glusterd_svc_check_volfile_identical function will failed ???  you should simply return error.",
-   #      "why are you going to manager function if glusterd_svc_check_volfile_identical function will failed ??? you should simply return error. same comments apply for all reconfigure function if you have done same things.",
-    #     "Why are you using cerr here instead of vtkErrorMacro?",
-     #    "Why call it GetStartIndices() instead of the expected 'GetSeeds()' ?",
-      #   "Why not do dict_get_str and use the ptr to find the index. That will avoid more book keeping",
-       #  "Why not level 1?  We don't care about warnings in third-party code.Using level 3 could actually *increase* the level depending on the actual build flags."]
 
 db_connection = mysql.connector.connect(
     host="localhost",
@@ -76,22 +66,16 @@ db_connection = mysql.connector.connect(
 cursor = db_connection.cursor()
 print("Connection to database has been established.")
 
-#for x in input:
- #   classify_sentiment(x)
-
-#exit()
-
-# OVERALL: 3 904 082
-# 0 - 100 000
-# 100 000 - 200 000
-# 200 000 - 300 000
-# 300 000 - 400 000
-
 print("Comments are loaded from database...")
-load_comments_query = "select * from t_history where sentiment IS NULL LIMIT 300000"
+# load_comments_query = "select * from t_history where sentiment IS NULL"
+# cursor.execute(load_comments_query)
 
-print("Still...")
-cursor.execute(load_comments_query)
+# For testing purposes, it might be helpful to modify the above statements to something like this:
+#
+limit = 100
+load_comments_query = "select * from t_history where sentiment IS NULL LIMIT %s"
+load_comments_params = limit
+cursor.execute(load_comments_query, load_comments_params)
 
 print("Results are being fetched by cursor...")
 comments = cursor.fetchall()
@@ -101,7 +85,7 @@ print("Starting sentiment analysis...")
 counter = 0
 
 for comment in comments:
-                                                                                    
+
     counter += 1
 
     if counter == 20:
@@ -112,7 +96,8 @@ for comment in comments:
         db_connection.commit()
         print("Batch has been committed.")
 
-    print(f"Comment " + str(counter) + " of 300,000")
+    # To check how many comments are still to go, uncomment the following line:
+    print(f"Comment " + str(counter) + " of " + str(limit))
     print()
     comment_id = comment[0]
     print(comment_id)
@@ -127,5 +112,5 @@ for comment in comments:
 
 print("Commit data to database...")
 db_connection.commit()
-print("Classified data has been successfully commmitted!")
+print("Data has been successfully commmitted!")
 db_connection.close()
