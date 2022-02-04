@@ -67,15 +67,16 @@ cursor = db_connection.cursor()
 print("Connection to database has been established.")
 
 print("Comments are loaded from database...")
-# load_comments_query = "select * from t_history where sentiment IS NULL"
-# cursor.execute(load_comments_query)
+load_comments_query = "select * from t_history where sentiment is null"
+cursor.execute(load_comments_query)
 
-# For testing purposes, it might be helpful to modify the above statements to something like this:
+# Classifying the entire dataset takes several days (on my CPU).
+# For testing purposes, it might be helpful to modify the previous two lines to something like this:
 #
-limit = 100
-load_comments_query = "select * from t_history where sentiment IS NULL LIMIT %s"
-load_comments_params = limit
-cursor.execute(load_comments_query, load_comments_params)
+# limit = 100
+# load_comments_query = "select * from t_history where sentiment is null LIMIT %s"
+# load_comments_params = (limit,)
+# cursor.execute(load_comments_query, load_comments_params)
 
 print("Results are being fetched by cursor...")
 comments = cursor.fetchall()
@@ -96,8 +97,7 @@ for comment in comments:
         db_connection.commit()
         print("Batch has been committed.")
 
-    # To check how many comments are still to go, uncomment the following line:
-    print(f"Comment " + str(counter) + " of " + str(limit))
+    print(f"Comment " + str(counter))
     print()
     comment_id = comment[0]
     print(comment_id)
@@ -112,5 +112,5 @@ for comment in comments:
 
 print("Commit data to database...")
 db_connection.commit()
-print("Data has been successfully commmitted!")
+print("Data has been successfully committed!")
 db_connection.close()
