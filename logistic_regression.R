@@ -1,9 +1,10 @@
 # install.packages("RMariaDB")
 # install.packages("dplyr")
 # install.packages("ggpubr")
-install.packages("ggplot2")
+# install.packages("ggplot2")
 
 library(DBI)
+library("ggplot2")
 library("dplyr")
 library("ggpubr")
 
@@ -52,8 +53,4 @@ log.model <-
 # Display regression analysis results.
 summary(log.model)
 
-barplot(df$ch_initialResponseTime)
-
-summary(log.model)$coefficients
-
-str(summary(log.model))
+saveRDS(df, 'output.rds')
