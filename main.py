@@ -3,7 +3,8 @@ import torch
 from torch import nn
 from transformers import BertModel, BertTokenizer
 
-# Before executing this script, make sure that 'openstack_preprocessing.sql' has been executed,
+# Before executing this script, make sure that 'openstack_preprocessing.sql'
+# has been executed,
 # where a 'sentiment' column is added to the original dataset.
 
 PRE_TRAINED_MODEL_NAME = 'bert-base-cased'
@@ -30,7 +31,8 @@ class SentimentClassifier(nn.Module):
 class_names = ["non-negative", "negative"]
 bert_model = SentimentClassifier(len(class_names))
 
-bert_model.load_state_dict(torch.load('best_model_state.bin', map_location=torch.device('cpu')))
+bert_model.load_state_dict(torch.load('best_model_state.bin',
+                                      map_location=torch.device('cpu')))
 
 tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
 
@@ -71,12 +73,13 @@ load_comments_query = "select * from t_history where sentiment is null"
 cursor.execute(load_comments_query)
 
 # Classifying the entire dataset takes several days (on my CPU).
-# For testing purposes, it might be helpful to modify the previous two lines to something like this:
+# For testing purposes, it might be helpful to modify the previous two lines
+# to something like this:
 #
-# limit = 100
-# load_comments_query = "select * from t_history where sentiment is null LIMIT %s"
-# load_comments_params = (limit,)
-# cursor.execute(load_comments_query, load_comments_params)
+#limit = 100
+#load_comments_query = "select * from t_history where sentiment is null LIMIT %s"
+#load_comments_params = (limit,)
+#cursor.execute(load_comments_query, load_comments_params)
 
 print("Results are being fetched by cursor...")
 comments = cursor.fetchall()
