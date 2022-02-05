@@ -23,7 +23,7 @@ df <-
   dbGetQuery(
     con,
     'select id, ch_status, ch_patchSetCount, ch_affectedFilesCount, ch_churnSize, ch_initialResponseTimeInHours, ch_authorialSentiment
- from t_change'
+ from t_change where ch_initialResponseTimeInHours < 50'
   )
 
 dbDisconnect(con)
@@ -42,10 +42,42 @@ df$ch_authorialSentiment.new <-
     no = 0
   )
 
+str(df)
+ggdensity(
+  df,
+  x = 'ch_patchSetCount',
+  add = 'mean',
+  color = 'ch_authorialSentiment'
+  ,
+  fill = 'ch_authorialSentiment',
+  palette = c('#00AFBB', '#E7B800')
+)
+
+gghistogram(
+  df,
+  x = 'ch_initialResponseTimeInHours',
+  add = 'mean',
+  color = 'ch_authorialSentiment'
+  ,
+  fill = 'ch_authorialSentiment',
+  bins=200,
+  palette = c('#00AFBB', '#E7B800')
+)
+
+ggscatter(df, x = 'ch_patchSetCount', y = 'ch_authorialSentiment',
+          
+          color = 'ch_authorialSentiment',
+          
+          palette = c('#00AFBB', '#E7B800', '#FC4E07'),
+                       
+                       ellipse = TRUE, mean.point = TRUE,
+                       
+                       rug = TRUE, font.label = 10, repel = TRUE)
+
 # Perform logistic regression analysis.
 log.model <-
   glm(
-    ch_authorialSentiment.new ~ ch_initialResponseTimeInHours,
+    ch_authorialSentiment.new ~ ch_affectedFilesCount,
     data = df,
     family = 'binomial'
   )

@@ -137,7 +137,43 @@ set ch0.ch_authorialSentiment =
                                   (select id
                                    from t_history
                                    where comm.sentiment like 'negative'))
-                          as negativeCommentsByPRAuthors),
+                          as negativeCommentsByAuthors),
+           'negative', 'non-negative')
+
+where ch0.id = comments.changeId;
+
+/*
+ Add "reviewer sentiment" column to table of changes.
+ */
+
+alter table t_change
+    add column ch_reviewerSentiment varchar(30);
+
+/*
+ Insert sentiment 'negative' or 'non-negative'
+ into column "ch_reviewerSentiment".
+ Cell is set to 'negative' if at least one comment that is made
+ by the CR request reviewer themselves was classified as 'negative'.
+ Negative comments made by the code author are discarded.
+ If no negative comments made by the reviewer are present
+ in the comments surrounding a CR request, cell is set to 'non-negative'.
+ */
+
+update t_change ch0, (select hist_changeId as changeId
+                      from t_history) as comments
+
+set ch0.ch_reviewerSentiment =
+        IF(ch0.id in (select *
+                      from (select ch1.id as changeId
+                            from t_change ch1
+                                     join t_history comm on ch1.id
+                                                        = comm.hist_changeId
+                            where ch1.ch_authorAccountId != hist_authorAccountId
+                              and comm.id in
+                                  (select id
+                                   from t_history
+                                   where comm.sentiment like 'negative'))
+                          as negativeCommentsByReviewers),
            'negative', 'non-negative')
 
 where ch0.id = comments.changeId;
