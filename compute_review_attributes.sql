@@ -107,15 +107,30 @@ set ch0.ch_initialResponseTimeInHours = responseTimesByChangeId.initialResponseT
 where ch0.id = responseTimesByChangeId.changeId;
 
 /*
- Add "authorial sentiment" column to table of changes.
+ A small number of samples have negative response times.
+ This happens if the date of when the review was created
+ is later than the date of the first review comment.
+ I assume that this may be due to bugs that occurred
+ while mining the Gerrit system / within Gerrit itself?
+
+ In any case, I discarded these reviews to be safe:
+ */
+
+delete
+from t_change
+where t_change.ch_initialResponseTimeInHours < 0;
+
+
+/*
+ Add "author sentiment" column to table of changes.
  */
 
 alter table t_change
-    add column ch_authorialSentiment varchar(30);
+    add column ch_authorSentiment varchar(30);
 
 /*
  Insert sentiment 'negative' or 'non-negative'
- into column "ch_authorialSentiment".
+ into column "ch_authorSentiment".
  Cell is set to 'negative' if at least one comment that is made
  by the CR request author themselves was classified as 'negative'.
  Negative comments made by reviewers are discarded.
@@ -126,18 +141,18 @@ alter table t_change
 update t_change ch0, (select hist_changeId as changeId
                       from t_history) as comments
 
-set ch0.ch_authorialSentiment =
+set ch0.ch_authorSentiment =
         IF(ch0.id in (select *
                       from (select ch1.id as changeId
                             from t_change ch1
                                      join t_history comm on ch1.id
-                                                        = comm.hist_changeId
+                                = comm.hist_changeId
                             where ch1.ch_authorAccountId = hist_authorAccountId
                               and comm.id in
                                   (select id
                                    from t_history
                                    where comm.sentiment like 'negative'))
-                          as negativeCommentsByAuthors),
+                               as negativeCommentsByAuthors),
            'negative', 'non-negative')
 
 where ch0.id = comments.changeId;
@@ -167,16 +182,34 @@ set ch0.ch_reviewerSentiment =
                       from (select ch1.id as changeId
                             from t_change ch1
                                      join t_history comm on ch1.id
-                                                        = comm.hist_changeId
-                            where ch1.ch_authorAccountId != hist_authorAccountId
+                                = comm.hist_changeId
+                            where ch1.ch_authorAccountId !=
+                                  hist_authorAccountId
                               and comm.id in
                                   (select id
                                    from t_history
                                    where comm.sentiment like 'negative'))
-                          as negativeCommentsByReviewers),
+                               as negativeCommentsByReviewers),
            'negative', 'non-negative')
 
 where ch0.id = comments.changeId;
+
+/*
+ Add "authorSentimentAsAvg" column to table of changes.
+ */
+alter table t_change
+    add column ch_authorSentimentAsAvg int;
+
+/*
+ Add "reviewerSentimentAsAvg" column to table of changes.
+ */
+alter table t_change
+    add column ch_reviewerSentimentAsAvg int;
+
+
+/*
+ Run calc_avg_sentiment.py file to add data to the columns above.
+ */
 
 /*
  How many negative comments
@@ -200,3 +233,13 @@ from t_change ch
 where ch_authorAccountId != hist_authorAccountId
   and comm.id in
       (select id from t_history where comm.sentiment like 'negative');
+
+/*
+ What are the respective first comment messages for each review?
+ */
+
+select comm.hist_message, comm.hist_authorAccountId
+from t_change ch
+         join t_history comm on ch.id = comm.hist_changeId
+where comm.id = ch.ch_initialCommentId
+and ch_initialResponseTimeInHours = 0;

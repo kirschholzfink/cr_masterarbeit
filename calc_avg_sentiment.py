@@ -1,7 +1,16 @@
 import math
 
 import mysql.connector
-import numpy as np;
+import numpy as np
+
+"""
+This script will calculate the overall sentiment
+of code review request authors and reviewers
+for each code review contained in the db_openstack database.
+
+Overall sentiment is calculated as the rounded average
+of all comment sentiments that belong to a review. 
+"""
 
 db_connection = mysql.connector.connect(
     host="localhost",
@@ -15,7 +24,6 @@ print("Connection to database has been established.")
 
 
 def calc_avg_sentiment(load_comment_query, update_query):
-
     print("Reviews are loaded from database...")
     load_changes_query = "select id, ch_authorAccountId from t_change;"
     cursor.execute(load_changes_query)
@@ -70,7 +78,6 @@ def calc_avg_sentiment(load_comment_query, update_query):
     print("Commit data to database...")
     db_connection.commit()
     print("Data has been successfully committed!")
-    db_connection.close()
 
 
 def normal_round(n):
@@ -82,8 +89,10 @@ def normal_round(n):
 author_comments_query = "select sentiment from t_history where hist_changeId = %s and hist_authorAccountId = %s;"
 reviewer_comments_query = "select sentiment from t_history where hist_changeId = %s and hist_authorAccountId != %s;"
 
-author_update_query = "update t_change set ch_authorialSentimentAsAvg = %s where id=%s"
+author_update_query = "update t_change set ch_authorSentimentAsAvg = %s where id=%s"
 review_update_query = "update t_change set ch_reviewerSentimentAsAvg = %s where id=%s"
 
 calc_avg_sentiment(reviewer_comments_query, review_update_query)
+calc_avg_sentiment(author_comments_query, author_update_query)
 
+db_connection.close()
