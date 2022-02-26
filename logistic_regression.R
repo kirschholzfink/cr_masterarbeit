@@ -23,7 +23,8 @@ con <- dbConnect(
 df <-
   dbGetQuery(
     con,
-    'select ch_patchSetCount, ch_affectedFilesCount, ch_churnSize, ch_initialResponseTimeInHours, ch_authorSentimentAsAvg, ch_reviewerSentimentAsAvg
+    'select ch_patchSetCount, ch_affectedFilesCount, ch_churnSize, ch_initialResponseTimeInHours, ch_authorSentimentAsAvg, ch_reviewerSentimentAsAvg,
+    ch_authorSentiment, ch_reviewerSentiment
  from t_change'
   )
 
@@ -96,7 +97,7 @@ ggscatter(
   df,
   x = 'ch_initialResponseTimeInHours',
   y = 'ch_authorSentimentAsAvg.cat',
-  xlab = 'Initial Response Count',
+  xlab = 'Initial Response Time (in hours)',
   ylab = 'Author Sentiment',
   
   color = 'ch_authorSentimentAsAvg.cat',
@@ -133,11 +134,11 @@ ggscatter(
 ggscatter(
   df,
   x = 'ch_patchSetCount',
-  y = 'ch_authorSentiment',
+  y = 'ch_authorSentimentAsAvg.cat',
   xlab = 'Patch Set Count',
   ylab = 'Author Sentiment',
   
-  color = 'ch_authorSentiment',
+  color = 'ch_authorSentimentAsAvg.cat',
   
   palette = c("#e86530", "#f28c02"),
   
@@ -153,7 +154,7 @@ ggscatter(
   df,
   x = 'ch_initialResponseTimeInHours',
   y = 'ch_reviewerSentimentAsAvg.cat',
-  xlab = 'Initial Response Time',
+  xlab = 'Initial Response Time (in hours)',
   ylab = 'Reviewer Sentiment',
   
   color = 'ch_reviewerSentimentAsAvg.cat',
@@ -210,16 +211,25 @@ ggscatter(
 
 # Check independent variables for multicollinearity by means of Variance Inflation Factor (VIF) method.
 
-vif.model <-
+vif.model.auth <-
   glm(
-    factor(ch_authorSentiment.bin) ~ ch_initialResponseTimeInHours + ch_patchSetCount + ch_affectedFilesCount + ch_churnSize,
+    factor(ch_authorSentimentAsAvg) ~ ch_initialResponseTimeInHours + ch_patchSetCount + ch_affectedFilesCount + ch_churnSize,
     data = df,
     family = 'binomial'
   )
 
-vif(vif.model)
+vif(vif.model.auth)
 
-# ch_affectedFilesCount and ch_churnSize are highly correlated, which is why ch_affectedFilesCount is omitted as a factor in the model below:
+vif.model.rev <-
+  glm(
+    factor(ch_reviewerSentimentAsAvg) ~ ch_initialResponseTimeInHours + ch_patchSetCount + ch_affectedFilesCount + ch_churnSize,
+    data = df,
+    family = 'binomial'
+  )
+
+vif(vif.model.rev)
+
+# ch_affectedFilesCount and ch_churnSize are highly correlated as predictors of author sentiment, which is why ch_affectedFilesCount is omitted as a factor in the model below:
 
 # Regression analysis for author sentiment.
 
@@ -232,6 +242,10 @@ auth.model <-
 
 summary(auth.model)
 
+# Calculating the odds ratio (OR) for the author sentiment logistic classifier.
+
+exp(coef(auth.model))
+
 # Regression analysis for reviewer sentiment.
 
 rev.model <-
@@ -243,5 +257,8 @@ rev.model <-
 
 summary(rev.model)
 
+# Calculating the odds ratio (OR) for the reviewer sentiment logistic classifier.
+
+exp(coef(rev.model))
 
 saveRDS(df, 'output.rds')

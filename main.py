@@ -31,7 +31,7 @@ class SentimentClassifier(nn.Module):
 class_names = ["non-negative", "negative"]
 bert_model = SentimentClassifier(len(class_names))
 
-bert_model.load_state_dict(torch.load('best_model_state.bin',
+bert_model.load_state_dict(torch.load('bert_sentiment_classifier.bin',
                                       map_location=torch.device('cpu')))
 
 tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
